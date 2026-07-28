@@ -146,11 +146,23 @@
     padding:9px 14px 9px 38px; position:relative; border-bottom:1px solid var(--line); font-size:14.5px;
   }
   .checklist li:before{
-    content:"○"; position:absolute; left:12px; color:var(--accent); font-size:16px; top:8px;
+    content:"○"; position:absolute; left:12px; color:var(--accent); font-size:16px; top:10px;
+  }
+  .gap-item-title{
+    font-weight:600; color:var(--ink); font-size:14.5px; line-height:1.4; margin-bottom:4px;
+  }
+  .gap-tag{
+    font-weight:700; color:#a83232; background:var(--red-soft); padding:2px 7px;
+    border-radius:4px; font-size:11px; text-transform:uppercase; letter-spacing:0.04em;
+    margin-right:8px; display:inline-block; vertical-align:middle;
   }
   .gap-reason{
-    margin-top:6px; font-size:13px; line-height:1.45; color:#8c431d; background:var(--accent-soft);
-    border-left:3px solid var(--accent); padding:6px 12px; border-radius:4px; margin-bottom:4px;
+    margin-top:6px; font-size:13px; line-height:1.45; color:#7a3b16; background:var(--accent-soft);
+    border-left:3px solid var(--accent); padding:8px 12px; border-radius:4px; margin-bottom:4px;
+  }
+  .gap-reason-title{
+    font-weight:700; color:#5c270d; display:block; margin-bottom:2px; font-size:12.5px;
+    text-transform:uppercase; letter-spacing:0.03em;
   }
 
   .top-link{
@@ -1279,85 +1291,130 @@ export function verifyToken(token) {
     <!-- ================= SECTION 10 ================= -->
     <section class="block" id="s10">
       <h2><span class="num">10</span> Known Gaps &amp; Review Checklist</h2>
-      <p class="intro">This is the team's own honest punch list — the items an auditor would otherwise have to find themselves. Presenting this proactively with the rationale behind each gap is usually the fastest way to build trust in a review.</p>
+      <p class="intro">This is the team's own honest punch list — the items an auditor would otherwise have to find themselves. Presenting each gap proactively alongside the specific technical rationale behind it is the fastest way to build trust in a review.</p>
 
       <h3 class="sub">Architecture / modularity</h3>
       <ul class="checklist">
         <li>
-          <div>Split the oversized <code class="inline">services/publicCatalog.service.js</code> (distance calculation + listing logic are currently mixed together)</div>
-          <div class="gap-reason"><strong>Why this gap is here:</strong> Built rapidly during initial MVP development to co-locate all public catalog discovery, geolocation math, and listing logic in a single service file before vendor types expanded.</div>
+          <div class="gap-item-title"><span class="gap-tag">Gap</span>Split the oversized <code class="inline">services/publicCatalog.service.js</code> (distance calculation + listing logic are currently mixed together)</div>
+          <div class="gap-reason">
+            <span class="gap-reason-title">Why this gap is here:</span>
+            Built rapidly during initial MVP development to co-locate all public catalog discovery, geolocation math, and listing logic in a single service file before vendor types expanded.
+          </div>
         </li>
         <li>
-          <div>Prefer repository methods over raw <code class="inline">prisma.appointment</code> calls inside payment verification</div>
-          <div class="gap-reason"><strong>Why this gap is here:</strong> Written directly inside the payment controller/service during early Razorpay integration to enable fast end-to-end payment testing without updating repository interfaces first.</div>
+          <div class="gap-item-title"><span class="gap-tag">Gap</span>Prefer repository methods over raw <code class="inline">prisma.appointment</code> calls inside payment verification</div>
+          <div class="gap-reason">
+            <span class="gap-reason-title">Why this gap is here:</span>
+            Written directly inside the payment controller/service during early Razorpay integration to enable fast end-to-end payment testing without updating repository interfaces first.
+          </div>
         </li>
         <li>
-          <div>Deduplicate the four repeated Haversine <code class="inline">$queryRaw</code> blocks into one shared helper</div>
-          <div class="gap-reason"><strong>Why this gap is here:</strong> Implemented inline per vendor type (vets, groomers, clinics, boarding) to allow custom sorting/filtering rules per vendor before abstracting a common SQL builder.</div>
+          <div class="gap-item-title"><span class="gap-tag">Gap</span>Deduplicate the four repeated Haversine <code class="inline">$queryRaw</code> blocks into one shared helper</div>
+          <div class="gap-reason">
+            <span class="gap-reason-title">Why this gap is here:</span>
+            Implemented inline per vendor type (vets, groomers, clinics, boarding) to allow custom sorting/filtering rules per vendor before abstracting a common SQL builder.
+          </div>
         </li>
       </ul>
 
       <h3 class="sub">Data design</h3>
       <ul class="checklist">
         <li>
-          <div>Add a real <code class="inline">@relation</code> / foreign key between <code class="inline">BusinessTransaction.appointmentId</code> and <code class="inline">Appointment</code></div>
-          <div class="gap-reason"><strong>Why this gap is here:</strong> Designed loosely to support logging business transactions for non-appointment operations (e.g., custom walk-in invoices or manual adjustments) without raising foreign key constraint errors.</div>
+          <div class="gap-item-title"><span class="gap-tag">Gap</span>Add a real <code class="inline">@relation</code> / foreign key between <code class="inline">BusinessTransaction.appointmentId</code> and <code class="inline">Appointment</code></div>
+          <div class="gap-reason">
+            <span class="gap-reason-title">Why this gap is here:</span>
+            Designed loosely to support logging business transactions for non-appointment operations (e.g., custom walk-in invoices or manual adjustments) without raising foreign key constraint errors.
+          </div>
         </li>
         <li>
-          <div>Consider a proper <code class="inline">petId</code> foreign key on <code class="inline">Appointment</code></div>
-          <div class="gap-reason"><strong>Why this gap is here:</strong> Currently toggled off for testing purposes during development to allow flexible booking flows.</div>
+          <div class="gap-item-title"><span class="gap-tag">Gap</span>Consider a proper <code class="inline">petId</code> foreign key on <code class="inline">Appointment</code></div>
+          <div class="gap-reason">
+            <span class="gap-reason-title">Why this gap is here:</span>
+            Currently toggled off for testing purposes during development to allow flexible booking flows.
+          </div>
         </li>
         <li>
-          <div>Replace the <code class="inline">notes</code> JSON meta pattern with real child tables if reporting/filtering on booking extras is ever required</div>
-          <div class="gap-reason"><strong>Why this gap is here:</strong> Chosen for schema flexibility during initial product iteration, allowing vendor-specific addon fields to evolve rapidly without requiring frequent database migrations.</div>
+          <div class="gap-item-title"><span class="gap-tag">Gap</span>Replace the <code class="inline">notes</code> JSON meta pattern with real child tables if reporting/filtering on booking extras is ever required</div>
+          <div class="gap-reason">
+            <span class="gap-reason-title">Why this gap is here:</span>
+            Chosen for schema flexibility during initial product iteration, allowing vendor-specific addon fields to evolve rapidly without requiring frequent database migrations.
+          </div>
         </li>
       </ul>
 
       <h3 class="sub">Cache</h3>
       <ul class="checklist">
         <li>
-          <div>Require Redis (rather than allowing the in-memory fallback) once running multiple instances in production</div>
-          <div class="gap-reason"><strong>Why this gap is here:</strong> Built to simplify local development and single-instance server setups so developers can run and test the application without requiring a local Redis container.</div>
+          <div class="gap-item-title"><span class="gap-tag">Gap</span>Require Redis (rather than allowing the in-memory fallback) once running multiple instances in production</div>
+          <div class="gap-reason">
+            <span class="gap-reason-title">Why this gap is here:</span>
+            Built to simplify local development and single-instance server setups so developers can run and test the application without requiring a local Redis container.
+          </div>
         </li>
         <li>
-          <div>Consider finer-grained invalidation than wiping the whole <code class="inline">public:*</code> namespace on every vendor mutation</div>
-          <div class="gap-reason"><strong>Why this gap is here:</strong> Guarantees 100% cache freshness and prevents stale vendor search results across complex filter combinations with minimal invalidation code complexity during initial launch.</div>
+          <div class="gap-item-title"><span class="gap-tag">Gap</span>Consider finer-grained invalidation than wiping the whole <code class="inline">public:*</code> namespace on every vendor mutation</div>
+          <div class="gap-reason">
+            <span class="gap-reason-title">Why this gap is here:</span>
+            Guarantees 100% cache freshness and prevents stale vendor search results across complex filter combinations with minimal invalidation code complexity during initial launch.
+          </div>
         </li>
       </ul>
 
       <h3 class="sub">Payments</h3>
       <ul class="checklist">
         <li>
-          <div>Switch the signature comparison to <code class="inline">crypto.timingSafeEqual</code></div>
-          <div class="gap-reason"><strong>Why this gap is here:</strong> Written using standard JavaScript string inequality (<code class="inline">!==</code>) during rapid prototype setup; requires conversion to constant-time buffer comparison to eliminate theoretical timing side-channel attacks.</div>
+          <div class="gap-item-title"><span class="gap-tag">Gap</span>Switch the signature comparison to <code class="inline">crypto.timingSafeEqual</code></div>
+          <div class="gap-reason">
+            <span class="gap-reason-title">Why this gap is here:</span>
+            Written using standard JavaScript string inequality (<code class="inline">!==</code>) during rapid prototype setup; requires conversion to constant-time buffer comparison to eliminate theoretical timing side-channel attacks.
+          </div>
         </li>
         <li>
-          <div>Add Razorpay webhooks for server-side payment confirmation, independent of the client completing the verify call</div>
-          <div class="gap-reason"><strong>Why this gap is here:</strong> Initial payment implementation prioritized immediate in-app UI checkout feedback; server-to-server webhook infrastructure was deferred to Phase 2 to avoid setting up webhook secret tunnels during local dev.</div>
+          <div class="gap-item-title"><span class="gap-tag">Gap</span>Add Razorpay webhooks for server-side payment confirmation, independent of the client completing the verify call</div>
+          <div class="gap-reason">
+            <span class="gap-reason-title">Why this gap is here:</span>
+            Initial payment implementation prioritized immediate in-app UI checkout feedback; server-to-server webhook infrastructure was deferred to Phase 2 to avoid setting up webhook secret tunnels during local dev.
+          </div>
         </li>
         <li>
-          <div>Deprecate the legacy verify path that still trusts a client-provided <code class="inline">booking</code> body</div>
-          <div class="gap-reason"><strong>Why this gap is here:</strong> Maintained for backwards compatibility to support older mobile/web client builds during rolling API updates without breaking active user sessions.</div>
+          <div class="gap-item-title"><span class="gap-tag">Gap</span>Deprecate the legacy verify path that still trusts a client-provided <code class="inline">booking</code> body</div>
+          <div class="gap-reason">
+            <span class="gap-reason-title">Why this gap is here:</span>
+            Maintained for backwards compatibility to support older mobile/web client builds during rolling API updates without breaking active user sessions.
+          </div>
         </li>
         <li>
-          <div>Add a cleanup job for appointments left <code class="inline">PENDING</code> after an abandoned checkout</div>
-          <div class="gap-reason"><strong>Why this gap is here:</strong> Automated background expiration cron jobs were deferred until booking volume required automatic slot release for abandoned checkouts.</div>
+          <div class="gap-item-title"><span class="gap-tag">Gap</span>Add a cleanup job for appointments left <code class="inline">PENDING</code> after an abandoned checkout</div>
+          <div class="gap-reason">
+            <span class="gap-reason-title">Why this gap is here:</span>
+            Automated background expiration cron jobs were deferred until booking volume required automatic slot release for abandoned checkouts.
+          </div>
         </li>
         <li>
-          <div>Rotate any API keys that may have been shared outside secure environment storage</div>
-          <div class="gap-reason"><strong>Why this gap is here:</strong> Standard post-handoff security procedure to ensure all test/staging credentials used during development are refreshed prior to production launch.</div>
+          <div class="gap-item-title"><span class="gap-tag">Gap</span>Rotate any API keys that may have been shared outside secure environment storage</div>
+          <div class="gap-reason">
+            <span class="gap-reason-title">Why this gap is here:</span>
+            Standard post-handoff security procedure to ensure all test/staging credentials used during development are refreshed prior to production launch.
+          </div>
         </li>
       </ul>
 
       <h3 class="sub">Security</h3>
       <ul class="checklist">
         <li>
-          <div>Strong <code class="inline">JWT_SECRET</code> required in production (already enforced — the app won't boot otherwise)</div>
-          <div class="gap-reason"><strong>Why this gap is here:</strong> System already enforces strict boot checks for <code class="inline">JWT_SECRET</code>; retained in the audit list as an ongoing operational checklist item for deployment environments.</div>
+          <div class="gap-item-title"><span class="gap-tag">Gap</span>Strong <code class="inline">JWT_SECRET</code> required in production (already enforced — the app won't boot otherwise)</div>
+          <div class="gap-reason">
+            <span class="gap-reason-title">Why this gap is here:</span>
+            System already enforces strict boot checks for <code class="inline">JWT_SECRET</code>; retained in the audit list as an ongoing operational checklist item for deployment environments.
+          </div>
         </li>
         <li>
-          <div>Confirm the Razorpay secret key never appears anywhere in the frontend bundle</div>
-          <div class="gap-reason"><strong>Why this gap is here:</strong> Verified in current build; kept on the checklist to prevent regression when frontend payment utility functions are modified.</div>
+          <div class="gap-item-title"><span class="gap-tag">Gap</span>Confirm the Razorpay secret key never appears anywhere in the frontend bundle</div>
+          <div class="gap-reason">
+            <span class="gap-reason-title">Why this gap is here:</span>
+            Verified in current build; kept on the checklist to prevent regression when frontend payment utility functions are modified.
+          </div>
         </li>
       </ul>
       <a class="top-link" href="#overview">↑ back to top</a>
