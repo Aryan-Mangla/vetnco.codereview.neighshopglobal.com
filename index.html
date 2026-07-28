@@ -503,7 +503,13 @@ export function authorize(...roles) {
       <p>Reuse isn't perfect everywhere, and it's better for the developer to raise these proactively than have the auditor find them first.</p>
 
       <h4 class="subsub">Gap 1 — booking "extras" packed into a notes field</h4>
-      <div class="flag"><strong>What's happening:</strong> hostel stays, lab tests, and grooming add-ons don't have their own database columns. Instead, the service layer builds a small JSON object and appends it to the free-text <code class="inline">notes</code> field on the booking, separated by a marker string.</div>
+      <div class="flag">
+        <div><strong>What's happening:</strong> hostel stays, lab tests, and grooming add-ons don't have their own database columns. Instead, the service layer builds a small JSON object and appends it to the free-text <code class="inline">notes</code> field on the booking, separated by a marker string.</div>
+        <div class="gap-reason">
+          <span class="gap-reason-title">Why this gap is here:</span>
+          Chosen for schema flexibility during initial product iteration, allowing vendor-specific addon fields to evolve rapidly without requiring frequent database migrations.
+        </div>
+      </div>
       <div class="file-tag"><span class="dot"></span>services/me.service.js</div>
       <pre><code class="language-javascript">// The Appointment schema has no columns for these. We serialize them
 // into a structured notes field so they are preserved for display.
@@ -521,7 +527,13 @@ const combinedNotes = [userNote, metaJson].filter(Boolean).join('\n---META---\n'
       <p>This works functionally, but it means the database can't filter, sort, or report on "how many hostel nights were booked this month" without parsing text — that logic would have to live in application code rather than a SQL query.</p>
 
       <h4 class="subsub">Gap 2 — the same distance query duplicated per vendor table</h4>
-      <div class="flag"><strong>What's happening:</strong> "search near me" needs a Haversine (great-circle distance) calculation. Rather than one shared helper, the same raw SQL block is repeated once per vendor table (clinics, hostels, grooming centres, labs).</div>
+      <div class="flag">
+        <div><strong>What's happening:</strong> "search near me" needs a Haversine (great-circle distance) calculation. Rather than one shared helper, the same raw SQL block is repeated once per vendor table (clinics, hostels, grooming centres, labs).</div>
+        <div class="gap-reason">
+          <span class="gap-reason-title">Why this gap is here:</span>
+          Implemented inline per vendor type (vets, groomers, clinics, boarding) to allow custom sorting/filtering rules per vendor before abstracting a common SQL builder.
+        </div>
+      </div>
       <div class="file-tag"><span class="dot"></span>services/publicCatalog.service.js</div>
       <pre><code class="language-javascript">if (tableName === 'vet_clinics') {
   query = prisma.$queryRaw`
@@ -660,7 +672,13 @@ enum TransactionPayoutStatus {
   @@index([createdAt])
   @@map("business_transactions")
 }</code></pre>
-      <div class="flag"><strong>Flag for the auditor:</strong> <code class="inline">appointmentId</code> on this table has no Prisma <code class="inline">@relation</code> back to <code class="inline">Appointment</code> — it's stored, but the database will not stop you from writing a transaction that points at an appointment that doesn't exist. Same with <code class="inline">businessId</code>, which isn't a real foreign key to whichever vendor table it belongs to.</div>
+      <div class="flag">
+        <div><strong>Flag for the auditor:</strong> <code class="inline">appointmentId</code> on this table has no Prisma <code class="inline">@relation</code> back to <code class="inline">Appointment</code> — it's stored, but the database will not stop you from writing a transaction that points at an appointment that doesn't exist. Same with <code class="inline">businessId</code>, which isn't a real foreign key to whichever vendor table it belongs to.</div>
+        <div class="gap-reason">
+          <span class="gap-reason-title">Why this gap is here:</span>
+          Designed loosely to support logging business transactions for non-appointment operations (e.g., custom walk-in invoices or manual adjustments) without raising foreign key constraint errors.
+        </div>
+      </div>
 
       <h3 class="sub">How a vendor type maps to a payout "panel"</h3>
       <p>Since vendors are spread across multiple tables (clinics, labs, hostels, individual vets, individual groomers), this small lookup table is what bridges a booking's <code class="inline">vendorType</code> to the correct payout panel category. It's a good example of business rules being centralized in one small, readable place rather than scattered across conditionals.</p>
@@ -749,7 +767,13 @@ class CacheService {
 }
 
 export default new CacheService();</code></pre>
-      <div class="flag"><strong>Worth flagging:</strong> the in-memory fallback only lives inside a single Node.js process. If the app is ever scaled to run on more than one server/instance, each instance would have its own separate cache — and a write on one instance wouldn't invalidate the cache on another unless Redis is actually configured in that environment.</div>
+      <div class="flag">
+        <div><strong>Worth flagging:</strong> the in-memory fallback only lives inside a single Node.js process. If the app is ever scaled to run on more than one server/instance, each instance would have its own separate cache — and a write on one instance wouldn't invalidate the cache on another unless Redis is actually configured in that environment.</div>
+        <div class="gap-reason">
+          <span class="gap-reason-title">Why this gap is here:</span>
+          Built to simplify local development and single-instance server setups so developers can run and test the application without requiring a local Redis container.
+        </div>
+      </div>
 
       <h3 class="sub">HTTP-level caching middleware</h3>
       <p>Rather than caching inside each service, caching is applied as Express middleware — meaning it caches the final JSON response of a whole GET request, keyed by the URL. It's transparent to whatever controller runs "underneath" it.</p>
@@ -1074,7 +1098,13 @@ export default prisma;</code></pre>
     .digest('hex');
   return expected === signature; // note: not timing-safe — review recommendation
 }</code></pre>
-      <div class="risk"><strong>Security note for the auditor:</strong> the signature comparison above uses JavaScript's <code class="inline">===</code> operator rather than a constant-time comparison (e.g. Node's <code class="inline">crypto.timingSafeEqual</code>). In theory this opens a timing side-channel that could let an attacker infer the correct signature byte-by-byte through repeated requests. In practice, exploiting this over a network with realistic jitter is very difficult, but it's flagged in the team's own checklist (Section 10) as a fix worth making, since the safer version is a one-line change.</div>
+      <div class="risk">
+        <div><strong>Security note for the auditor:</strong> the signature comparison above uses JavaScript's <code class="inline">===</code> operator rather than a constant-time comparison (e.g. Node's <code class="inline">crypto.timingSafeEqual</code>). In theory this opens a timing side-channel that could let an attacker infer the correct signature byte-by-byte through repeated requests. In practice, exploiting this over a network with realistic jitter is very difficult, but it's flagged in the team's own checklist (Section 10) as a fix worth making, since the safer version is a one-line change.</div>
+        <div class="gap-reason">
+          <span class="gap-reason-title">Why this gap is here:</span>
+          Written using standard JavaScript string comparison (<code class="inline">===</code>) during rapid prototype setup; requires conversion to constant-time buffer comparison to eliminate theoretical timing side-channel attacks.
+        </div>
+      </div>
 
       <p>Once the signature checks out, the order is re-fetched from Razorpay itself (not trusted from the client), and cross-checked on three more dimensions: does this order actually belong to the requesting user, does the paid amount match the appointment's amount, and does the appointment itself belong to this user.</p>
       <div class="file-tag"><span class="dot"></span>services/payment.service.js</div>
@@ -1133,7 +1163,13 @@ export default prisma;</code></pre>
   // Legacy fallback path — creates CONFIRMED appointment from client booking body
   // ...
 }</code></pre>
-      <div class="flag"><strong>Worth flagging:</strong> there is a "legacy fallback" path (used when no pre-created appointment ID exists on the order) that confirms a booking based on the <code class="inline">booking</code> object the client sends in the verify request, rather than a server-side record. The team's own checklist marks this as something to deprecate — it's the one place in the payment flow that still trusts client-provided data for booking details rather than a value the server created earlier.</div>
+      <div class="flag">
+        <div><strong>Worth flagging:</strong> there is a "legacy fallback" path (used when no pre-created appointment ID exists on the order) that confirms a booking based on the <code class="inline">booking</code> object the client sends in the verify request, rather than a server-side record. The team's own checklist marks this as something to deprecate — it's the one place in the payment flow that still trusts client-provided data for booking details rather than a value the server created earlier.</div>
+        <div class="gap-reason">
+          <span class="gap-reason-title">Why this gap is here:</span>
+          Maintained for backwards compatibility to support older mobile/web client builds during rolling API updates without breaking active user sessions.
+        </div>
+      </div>
 
       <h3 class="sub">Step 5 — Writing the payout ledger entry</h3>
       <p>The commission split is calculated from the platform's configurable commission percentage (default 12%, see Section 3) at the moment of confirmation — not hardcoded — so an admin changing the commission rate takes effect on the next transaction without a code deploy.</p>
@@ -1182,7 +1218,13 @@ export default prisma;</code></pre>
         <tr><td>Timing-safe compare</td><td><strong>Not used</strong> — uses <code class="inline">===</code> today</td></tr>
         <tr><td>Webhooks</td><td><strong>Not implemented</strong> — client-driven verify only</td></tr>
       </table>
-      <div class="risk"><strong>Biggest structural gap to be upfront about:</strong> there is no Razorpay webhook handler. Today, a payment is only ever confirmed because the user's browser called <code class="inline">/verify</code> after checkout. If a payment actually succeeds on Razorpay's side but the user's browser closes, crashes, or loses connection before that call completes, the booking stays <code class="inline">PENDING</code> forever even though Razorpay was paid. A webhook (a server-to-server callback from Razorpay) is the standard fix, and it's already listed in the team's own gap list in Section 10.</div>
+      <div class="risk">
+        <div><strong>Biggest structural gap to be upfront about:</strong> there is no Razorpay webhook handler. Today, a payment is only ever confirmed because the user's browser called <code class="inline">/verify</code> after checkout. If a payment actually succeeds on Razorpay's side but the user's browser closes, crashes, or loses connection before that call completes, the booking stays <code class="inline">PENDING</code> forever even though Razorpay was paid. A webhook (a server-to-server callback from Razorpay) is the standard fix, and it's already listed in the team's own gap list in Section 10.</div>
+        <div class="gap-reason">
+          <span class="gap-reason-title">Why this gap is here:</span>
+          Initial payment implementation prioritized immediate in-app UI checkout feedback; server-to-server webhook infrastructure was deferred to Phase 2 to avoid setting up webhook secret tunnels during local dev.
+        </div>
+      </div>
       <a class="top-link" href="#overview">↑ back to top</a>
     </section>
 
