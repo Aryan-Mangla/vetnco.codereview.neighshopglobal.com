@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VETnCO — File &amp; Line-Number Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0b1220;
+    --navy-2:#111a2e;
+    --ink:#1b2333;
+    --ink-soft:#4a5568;
+    --paper:#fbfaf7;
+    --card:#ffffff;
+    --line:#e7e3da;
+    --accent:#1f6f6b;
+    --accent-soft:#e2f0ee;
+    --amber:#a8710f;
+    --amber-soft:#fbf0dc;
+    --red:#a83232;
+    --red-soft:#f8e6e4;
+    --mono:'JetBrains Mono', monospace;
+    --sans:'Inter', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0; font-family:var(--sans); color:var(--ink); background:var(--paper);
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent); text-decoration:none;}
+  a:hover{text-decoration:underline;}
+
+  .shell{display:grid; grid-template-columns:280px 1fr; min-height:100vh;}
+  .sidebar{
+    background:var(--navy); color:#c9d2e3; position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 0 60px; border-right:1px solid #060a14;
+  }
+  .brand{padding:0 24px 22px; border-bottom:1px solid rgba(255,255,255,.08); margin-bottom:16px;}
+  .brand .tag{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); font-weight:700;}
+  .brand h1{font-size:19px; margin:6px 0 4px; color:#fff; font-weight:800; letter-spacing:-.01em;}
+  .brand p{font-size:12.5px; color:#8b96ad; margin:0; line-height:1.5;}
+  nav.toc{padding:0 12px;}
+  nav.toc .grp-label{font-size:10.5px; text-transform:uppercase; letter-spacing:.1em; color:#5c6b8a; margin:18px 12px 6px;}
+  nav.toc a{
+    display:block; padding:7px 12px; border-radius:7px; color:#aeb9d0; font-size:13.5px;
+    font-weight:500; margin-bottom:1px;
+  }
+  nav.toc a:hover{background:rgba(255,255,255,.06); color:#fff; text-decoration:none;}
+
+  main{padding:56px 64px 120px; max-width:1080px;}
+  header.hero{border-bottom:2px solid var(--ink); padding-bottom:26px; margin-bottom:44px;}
+  header.hero .eyebrow{font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); font-weight:700; margin-bottom:10px;}
+  header.hero h1{font-size:36px; margin:0 0 12px; line-height:1.15; letter-spacing:-.02em; font-weight:800;}
+  header.hero p.lede{font-size:16px; color:var(--ink-soft); max-width:74ch; line-height:1.6; margin:0 0 16px;}
+  .meta-row{display:flex; gap:22px; flex-wrap:wrap; font-size:13px; color:var(--ink-soft);}
+  .meta-row strong{color:var(--ink);}
+
+  .howto{
+    background:var(--accent-soft); border:1px solid #bcdcd8; border-radius:10px; padding:16px 20px;
+    font-size:14px; line-height:1.7; color:#123f3d; margin:22px 0 0;
+  }
+
+  section.block{margin-bottom:56px; scroll-margin-top:24px;}
+  section.block h2{font-size:25px; font-weight:800; letter-spacing:-.01em; margin:0 0 8px; display:flex; align-items:baseline; gap:12px;}
+  section.block h2 .num{color:var(--accent); font-family:var(--mono); font-size:15px; font-weight:600;}
+  section.block > .intro{color:var(--ink-soft); font-size:15px; line-height:1.7; margin:0 0 22px; max-width:80ch;}
+
+  h3.sub{font-size:18px; font-weight:700; margin:30px 0 8px;}
+  h4.subsub{font-size:14.5px; font-weight:700; margin:20px 0 6px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.03em;}
+
+  p{line-height:1.7; font-size:14.5px;}
+  ul, ol{line-height:1.7; font-size:14.5px;}
+
+  table{width:100%; border-collapse:collapse; margin:12px 0 22px; font-size:13.5px;}
+  th{
+    text-align:left; background:var(--ink); color:#f4f1e8; padding:8px 12px; font-weight:600;
+    font-size:12px; text-transform:uppercase; letter-spacing:.03em;
+  }
+  th:first-child{border-radius:7px 0 0 0;} th:last-child{border-radius:0 7px 0 0;}
+  td{padding:8px 12px; border-bottom:1px solid var(--line); vertical-align:top;}
+  tr:nth-child(even) td{background:#f6f4ee;}
+  .loc{
+    font-family:var(--mono); font-size:12.5px; background:#eee9dc; padding:2px 7px; border-radius:5px;
+    color:#0d4a46; font-weight:600; white-space:nowrap;
+  }
+  code.inline{font-family:var(--mono); background:#eee9dc; padding:2px 6px; border-radius:4px; font-size:.87em; color:#7a3b16;}
+
+  .flow{
+    font-family:var(--mono); background:var(--navy-2); color:#d7deee; padding:16px 20px; border-radius:10px;
+    font-size:13px; line-height:1.85; white-space:pre-wrap; margin:14px 0;
+  }
+  .flow .arrow{color:var(--accent);}
+
+  .note{
+    background:var(--amber-soft); border-left:3px solid var(--amber); padding:12px 16px; border-radius:0 8px 8px 0;
+    margin:12px 0; font-size:13.5px; color:#5c3f06; line-height:1.65;
+  }
+  .warn{
+    background:var(--red-soft); border-left:3px solid var(--red); padding:12px 16px; border-radius:0 8px 8px 0;
+    margin:12px 0; font-size:13.5px; color:#5c1c1c; line-height:1.65;
+  }
+
+  .top-link{display:inline-block; margin-top:30px; font-size:12px; color:var(--ink-soft); font-family:var(--mono);}
+  footer.docend{margin-top:70px; padding-top:24px; border-top:2px solid var(--ink); color:var(--ink-soft); font-size:13px;}
+
+  .credtable td:nth-child(2), .credtable td:nth-child(3){font-family:var(--mono); font-size:12.5px;}
+
+  @media (max-width:900px){
+    .shell{grid-template-columns:1fr;}
+    .sidebar{position:relative; height:auto;}
+    main{padding:36px 22px 90px;}
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="tag">Client Code Review</div>
+      <h1>VETnCO Platform</h1>
+      <p>File &amp; line-number map — every item cited by exact path and LOC so it can be opened directly in the repository.</p>
+    </div>
+    <nav class="toc">
+      <a href="#overview">Overview</a>
+      <div class="grp-label">Reference Sections</div>
+      <a href="#s1">1 · Architecture</a>
+      <a href="#s2">2 · Modularity &amp; Reuse</a>
+      <a href="#s3">3 · Data Design</a>
+      <a href="#s4">4 · Cache Usage</a>
+      <a href="#s5">5 · Database Usage</a>
+      <a href="#s6">6 · Payment Handling</a>
+      <a href="#s7">7 · Auth &amp; Security</a>
+      <a href="#s8">8 · API Structure</a>
+      <a href="#s9">9 · Frontend Architecture</a>
+      <a href="#s10">10 · Review Notes</a>
+      <a href="#s11">11 · Quick File Index</a>
+      <div class="grp-label">Companion</div>
+      <a href="vetnco-code-review-explained.html">→ Explained Edition</a>
+    </nav>
+  </aside>
+
+  <main>
+    <header class="hero" id="overview">
+      <div class="eyebrow">Technical Review · File Map Edition</div>
+      <h1>Where to find it in the repository</h1>
+      <p class="lede">This document is the pointer index for the client's reviewer or developer: every item mentioned in the review is listed here with its exact file path and, where meaningful, its line-of-code (LOC) range, so it can be opened directly in the repository rather than searched for. It is intentionally light on explanation — pair it with the companion "Explained Edition" for the plain-language walkthrough.</p>
+      <div class="meta-row">
+        <div><strong>Base path:</strong> repository root (<code class="inline">VETnCO-main/</code>)</div>
+        <div><strong>Stack:</strong> Node.js + Express (<code class="inline">/api/v1</code>) · Prisma + MySQL · React (Vite) · Redis · Razorpay</div>
+      </div>
+      <div class="howto"><strong>How to use this document:</strong> open each cited path in the repository and jump to the listed lines to verify the implementation described in the review. Line numbers may drift slightly after future commits — use the named function or symbol as a secondary anchor if a line number is off by a few rows.</div>
+    </header>
+
+    <!-- ============ SECTION 1 ============ -->
+    <section class="block" id="s1">
+      <h2><span class="num">01</span> System Architecture Overview</h2>
+      <table>
+        <tr><th>Layer</th><th>Responsibility</th><th>Entry / aggregator</th></tr>
+        <tr><td>HTTP / Express</td><td>Middleware, mounts API</td><td><code class="inline">loaders/express.js</code></td></tr>
+        <tr><td>API v1 router</td><td>Feature route aggregation</td><td><code class="inline">routes/v1/index.js</code> <span class="loc">L70–102</span></td></tr>
+        <tr><td>Controllers</td><td>Thin HTTP handlers</td><td><code class="inline">controllers/*.controller.js</code></td></tr>
+        <tr><td>Services</td><td>Business logic</td><td><code class="inline">services/*.service.js</code></td></tr>
+        <tr><td>Repositories</td><td>Prisma queries</td><td><code class="inline">repositories/*.repository.js</code></td></tr>
+        <tr><td>Prisma schema</td><td>Data model</td><td><code class="inline">prisma/schema.prisma</code></td></tr>
+        <tr><td>Frontend panels</td><td>Multi-app UI</td><td><code class="inline">resources/views/src/routes/AppRoutes.jsx</code></td></tr>
+      </table>
+
+      <h3 class="sub">Request flow (backend)</h3>
+      <div class="flow">Client <span class="arrow">→</span> Express <span class="arrow">→</span> /api/v1 <span class="arrow">→</span> Feature Route <span class="arrow">→</span> Zod validate <span class="arrow">→</span> Controller <span class="arrow">→</span> Service <span class="arrow">→</span> Repository <span class="arrow">→</span> Prisma/MySQL</div>
+
+      <h3 class="sub">Health endpoints</h3>
+      <table>
+        <tr><th>Endpoint</th><th>File</th><th>LOC</th></tr>
+        <tr><td>Liveness</td><td><code class="inline">routes/v1/index.js</code></td><td><span class="loc">L40–42</span></td></tr>
+        <tr><td>Readiness (DB ping)</td><td><code class="inline">routes/v1/index.js</code></td><td><span class="loc">L44–50</span></td></tr>
+        <tr><td>Version health</td><td><code class="inline">routes/v1/index.js</code></td><td><span class="loc">L57–66</span></td></tr>
+      </table>
+      <a class="top-link" href="#overview">↑ top</a>
+    </section>
+
+    <!-- ============ SECTION 2 ============ -->
+    <section class="block" id="s2">
+      <h2><span class="num">02</span> Code Modularity and Reuse</h2>
+
+      <h3 class="sub">2.1 — Backend layering (Route → Controller → Service → Repository)</h3>
+      <table>
+        <tr><th>Layer</th><th>Example file</th><th>What to review</th><th>LOC</th></tr>
+        <tr><td>Route aggregator</td><td><code class="inline">routes/v1/index.js</code></td><td>All feature mounts</td><td><span class="loc">L70–102</span></td></tr>
+        <tr><td>Feature routes</td><td><code class="inline">routes/v1/payments.routes.js</code></td><td>Auth + validate + controller</td><td><span class="loc">L12–16</span></td></tr>
+        <tr><td>Feature routes</td><td><code class="inline">routes/v1/me.routes.js</code></td><td>User "me" APIs</td><td>(full file)</td></tr>
+        <tr><td>Feature routes</td><td><code class="inline">routes/v1/appointments.routes.js</code></td><td>Admin/business appointments</td><td>(full file)</td></tr>
+        <tr><td>Controller</td><td><code class="inline">controllers/payment.controller.js</code></td><td>Thin handlers</td><td><span class="loc">L6–19</span></td></tr>
+        <tr><td>Controller</td><td><code class="inline">controllers/me.controller.js</code></td><td>Profile / pets / bookings</td><td>(full file)</td></tr>
+        <tr><td>Service</td><td><code class="inline">services/payment.service.js</code></td><td>Payment + booking orchestration</td><td><span class="loc">L26–186</span></td></tr>
+        <tr><td>Service</td><td><code class="inline">services/me.service.js</code></td><td>Appointment creation</td><td><span class="loc">L229–270</span></td></tr>
+        <tr><td>Repository</td><td><code class="inline">repositories/appointment.repository.js</code></td><td>Select shape + CRUD</td><td><span class="loc">L3–170</span></td></tr>
+        <tr><td>Repository</td><td><code class="inline">repositories/transaction.repository.js</code></td><td>Transactions CRUD / summary</td><td><span class="loc">L25–139</span></td></tr>
+      </table>
+
+      <h3 class="sub">Shared cross-cutting utilities</h3>
+      <table>
+        <tr><th>Utility</th><th>File</th><th>LOC</th><th>Purpose</th></tr>
+        <tr><td>Success/error JSON</td><td><code class="inline">utils/apiResponse.js</code></td><td>(file)</td><td>Standard API envelope</td></tr>
+        <tr><td>Async error wrapper</td><td><code class="inline">utils/asyncHandler.js</code></td><td>(file)</td><td>Avoids try/catch in every controller</td></tr>
+        <tr><td>App errors</td><td><code class="inline">utils/AppError.js</code></td><td>(file)</td><td>Typed HTTP errors</td></tr>
+        <tr><td>Business scoping</td><td><code class="inline">utils/businessScope.util.js</code></td><td>(file)</td><td>Restricts vendor data by panel</td></tr>
+        <tr><td>Panel registry</td><td><code class="inline">config/panelRegistry.js</code></td><td><span class="loc">L6–33+</span></td><td>Single config for all vendor panels</td></tr>
+      </table>
+
+      <h3 class="sub">Panel registry reuse (important for modularity)</h3>
+      <ul>
+        <li>Registry definition: <code class="inline">config/panelRegistry.js</code> <span class="loc">L8–33</span> (CLINIC example: model, role, vendorType, onboarding steps)</li>
+        <li>Consumed by auth for business JWTs: <code class="inline">middlewares/auth.middleware.js</code> <span class="loc">L24–48</span></li>
+      </ul>
+
+      <h3 class="sub">2.2 — Frontend reuse patterns</h3>
+      <table>
+        <tr><th>Pattern</th><th>File</th><th>LOC</th><th>Notes</th></tr>
+        <tr><td>Panel route composition</td><td><code class="inline">resources/views/src/routes/AppRoutes.jsx</code></td><td>(panel imports)</td><td>Admin / User / Business / Vet / Groomer</td></tr>
+        <tr><td>User app routes</td><td><code class="inline">resources/views/src/routes/UserRoutes.jsx</code></td><td>booking <span class="loc">~L65–67</span></td><td>Booking deep-link</td></tr>
+        <tr><td>Axios client factory</td><td><code class="inline">resources/views/src/services/api/createApiClient.js</code></td><td>refresh <span class="loc">~L47–96</span></td><td>Per-panel API + silent token refresh</td></tr>
+        <tr><td>Panel config</td><td><code class="inline">resources/views/src/config/panels.js</code></td><td>PANEL_TYPES / ROLE_MAP</td><td>Role → home path mapping</td></tr>
+        <tr><td>Shared list hook</td><td><code class="inline">resources/views/src/hooks/useEntityList.js</code></td><td>(file)</td><td>Generic paginated list for admin panels</td></tr>
+        <tr><td>Domain hook</td><td><code class="inline">resources/views/src/hooks/useAppointments.js</code></td><td>(file)</td><td>Composes entity list + appointment service</td></tr>
+        <tr><td>Payment orchestrator</td><td><code class="inline">resources/views/src/utils/bookWithPayment.js</code></td><td><span class="loc">L9–33</span></td><td>Shared by booking page + modal</td></tr>
+      </table>
+      <p><strong>Booking UI reuse:</strong> both <code class="inline">UserBookingPage.jsx</code> and <code class="inline">BookingModal.jsx</code> call the same <code class="inline">bookWithPayment</code> helper instead of duplicating Razorpay logic.</p>
+
+      <h3 class="sub">2.3 — What is modular / reusable today</h3>
+      <ul>
+        <li>Feature-based <code class="inline">routes/v1/*.routes.js</code> files (one domain per file)</li>
+        <li>Zod schemas isolated under <code class="inline">validations/</code></li>
+        <li>Vendor panels driven by <code class="inline">PANEL_REGISTRY</code> instead of copy-pasted auth logic</li>
+        <li>Frontend API clients created once via <code class="inline">createApiClient</code></li>
+      </ul>
+
+      <h3 class="sub">2.4 — What is less modular (for reviewer attention)</h3>
+      <ul>
+        <li>Appointment "extra" fields (hostel nights, lab tests, grooming services) are serialized into <code class="inline">notes</code> rather than first-class columns — see <code class="inline">services/me.service.js</code> <span class="loc">L232–246</span></li>
+        <li>Polymorphic vendor linking (<code class="inline">vendorType</code> + <code class="inline">vendorId</code>) without Prisma foreign keys — see Section 3</li>
+        <li>Some services instantiate Prisma outside the singleton (see Section 5)</li>
+      </ul>
+      <a class="top-link" href="#overview">↑ top</a>
+    </section>
+
+    <!-- ============ SECTION 3 ============ -->
+    <section class="block" id="s3">
+      <h2><span class="num">03</span> Data Design</h2>
+      <p class="intro">Source of truth: <code class="inline">prisma/schema.prisma</code></p>
+
+      <h3 class="sub">3.1 — Database</h3>
+      <table>
+        <tr><th>Item</th><th>Location</th></tr>
+        <tr><td>MySQL datasource</td><td><code class="inline">prisma/schema.prisma</code> <span class="loc">L8–11</span></td></tr>
+        <tr><td>Connection env</td><td><code class="inline">DATABASE_URL</code> in <code class="inline">.env</code> / <code class="inline">.env.example</code></td></tr>
+      </table>
+
+      <h3 class="sub">3.2 — Core enums</h3>
+      <table>
+        <tr><th>Enum</th><th>File</th><th>LOC</th><th>Values / purpose</th></tr>
+        <tr><td><code class="inline">UserRole</code></td><td><code class="inline">prisma/schema.prisma</code></td><td><span class="loc">L13–18</span></td><td>SUPER_ADMIN, ADMIN, PET_OWNER, VENDOR</td></tr>
+        <tr><td><code class="inline">UserStatus</code></td><td><code class="inline">prisma/schema.prisma</code></td><td><span class="loc">L20–25</span></td><td>ACTIVE / INACTIVE / PENDING / SUSPENDED</td></tr>
+        <tr><td><code class="inline">BusinessPanelType</code></td><td><code class="inline">prisma/schema.prisma</code></td><td><span class="loc">L33–40</span></td><td>CLINIC, GROOMING, LAB, HOSTEL, VETERINARIAN, INDIVIDUAL_GROOMER</td></tr>
+        <tr><td><code class="inline">AppointmentServiceType</code></td><td><code class="inline">prisma/schema.prisma</code></td><td><span class="loc">~L248–255</span></td><td>VET_CHECKUP, GROOMING, LAB_TEST, HOSTEL_STAY, …</td></tr>
+        <tr><td><code class="inline">AppointmentVendorType</code></td><td><code class="inline">prisma/schema.prisma</code></td><td><span class="loc">L257–264</span></td><td>VET_CLINIC, GROOMING_CENTRE, DIAGNOSTIC_LAB, PET_HOSTEL, …</td></tr>
+        <tr><td><code class="inline">AppointmentStatus</code></td><td><code class="inline">prisma/schema.prisma</code></td><td><span class="loc">L266–271</span></td><td>PENDING, CONFIRMED, COMPLETED, CANCELLED</td></tr>
+        <tr><td><code class="inline">TransactionPaymentStatus</code></td><td><code class="inline">prisma/schema.prisma</code></td><td><span class="loc">L1061–1066</span></td><td>SUCCESS, PENDING, FAILED, REFUNDED</td></tr>
+        <tr><td><code class="inline">TransactionPayoutStatus</code></td><td><code class="inline">prisma/schema.prisma</code></td><td><span class="loc">L1068–1073</span></td><td>PENDING, PROCESSING, PAID, HOLD</td></tr>
+      </table>
+
+      <h3 class="sub">3.3 — Key models</h3>
+
+      <h4 class="subsub">User — prisma/schema.prisma L273–304</h4>
+      <table>
+        <tr><th>Concern</th><th>Detail</th><th>LOC</th></tr>
+        <tr><td>Identity</td><td>Unique email, optional password</td><td><span class="loc">L276–278</span></td></tr>
+        <tr><td>RBAC</td><td><code class="inline">role</code> + <code class="inline">status</code></td><td><span class="loc">L279–280</span></td></tr>
+        <tr><td>Profile / geo</td><td>city, state, address</td><td><span class="loc">L283–285</span></td></tr>
+        <tr><td>Relations</td><td>appointments, pets, refreshTokens, …</td><td><span class="loc">L291–298</span></td></tr>
+        <tr><td>Indexes</td><td>role, status, city</td><td><span class="loc">L300–302</span></td></tr>
+      </table>
+
+      <h4 class="subsub">Pet — prisma/schema.prisma L376–403</h4>
+      <table>
+        <tr><th>Concern</th><th>Detail</th><th>LOC</th></tr>
+        <tr><td>Owner FK</td><td><code class="inline">userId</code> → User, cascade delete</td><td><span class="loc">L378, L399</span></td></tr>
+        <tr><td>Clinical fields</td><td>breed, vaccination, allergies, documents JSON</td><td><span class="loc">L380–395</span></td></tr>
+        <tr><td>Index</td><td><code class="inline">userId</code></td><td><span class="loc">L401</span></td></tr>
+      </table>
+      <div class="note">Design note: <code class="inline">Appointment</code> does <strong>not</strong> FK to <code class="inline">Pet</code>. Bookings store denormalized <code class="inline">petName</code> / <code class="inline">petType</code> (<span class="loc">L1032–1033</span>).</div>
+
+      <h4 class="subsub">Appointment — prisma/schema.prisma L1029–1059</h4>
+      <table>
+        <tr><th>Concern</th><th>Detail</th><th>LOC</th></tr>
+        <tr><td>Soft user link</td><td>optional <code class="inline">userId</code> → User</td><td><span class="loc">L1037, L1049</span></td></tr>
+        <tr><td>Polymorphic vendor</td><td><code class="inline">vendorType</code> + <code class="inline">vendorId</code> (no Prisma FK to clinic/lab/hostel)</td><td><span class="loc">L1040–1041</span></td></tr>
+        <tr><td>Money</td><td><code class="inline">amount</code> Decimal(10,2)</td><td><span class="loc">L1044</span></td></tr>
+        <tr><td>Status</td><td>default PENDING</td><td><span class="loc">L1045</span></td></tr>
+        <tr><td>Free-form notes</td><td>used for META JSON (hostel/lab extras)</td><td><span class="loc">L1046</span></td></tr>
+        <tr><td>Indexes</td><td>code, email, serviceType, vendorType, status, date, createdAt</td><td><span class="loc">L1051–1057</span></td></tr>
+      </table>
+      <div class="warn">
+        Gaps for review:
+        <ul style="margin:6px 0 0;">
+          <li>No <code class="inline">@@index([userId])</code></li>
+          <li>No <code class="inline">@@index([vendorId])</code></li>
+          <li>No FK from appointment → pet</li>
+          <li>No first-class columns for check-in/out, selected tests/services (stored in notes via service layer)</li>
+        </ul>
+      </div>
+
+      <h4 class="subsub">BusinessTransaction — prisma/schema.prisma L1090–1116</h4>
+      <table>
+        <tr><th>Concern</th><th>Detail</th><th>LOC</th></tr>
+        <tr><td>Business scope</td><td><code class="inline">panelType</code> + <code class="inline">businessId</code> (no FK)</td><td><span class="loc">L1093–1094</span></td></tr>
+        <tr><td>Booking link</td><td>optional <code class="inline">appointmentId</code> (no Prisma relation)</td><td><span class="loc">L1095</span></td></tr>
+        <tr><td>Commission split</td><td><code class="inline">amount</code>, <code class="inline">platformFee</code>, <code class="inline">netAmount</code></td><td><span class="loc">L1099–1101</span></td></tr>
+        <tr><td>Payment / payout</td><td>enums + <code class="inline">paidAt</code></td><td><span class="loc">L1102–1105</span></td></tr>
+        <tr><td>Indexes</td><td><code class="inline">[panelType, businessId]</code>, paymentStatus, payoutStatus, createdAt</td><td><span class="loc">L1111–1114</span></td></tr>
+      </table>
+
+      <h4 class="subsub">Vendor entities (parallel design)</h4>
+      <table>
+        <tr><th>Model</th><th>Approx. LOC in schema</th><th>Notes</th></tr>
+        <tr><td><code class="inline">VetClinic</code></td><td><span class="loc">~L520–567</span></td><td>Composite status/city index</td></tr>
+        <tr><td><code class="inline">GroomingCentre</code></td><td><span class="loc">~L609–653</span></td><td>Same pattern</td></tr>
+        <tr><td><code class="inline">DiagnosticLab</code></td><td><span class="loc">~L749–797</span></td><td>Same pattern</td></tr>
+        <tr><td><code class="inline">PetHostel</code></td><td><span class="loc">~L892–945</span></td><td>Branch self-relation</td></tr>
+        <tr><td><code class="inline">IndividualVeterinarian</code></td><td><span class="loc">~L1191–1254</span></td><td>Separate from clinic staff <code class="inline">Veterinarian</code></td></tr>
+        <tr><td><code class="inline">BusinessRegistration</code></td><td><span class="loc">~L420–471</span></td><td>Onboarding / approval bridge</td></tr>
+      </table>
+
+      <h4 class="subsub">RefreshToken — prisma/schema.prisma L306–333 (approx.)</h4>
+      <p>Stores a <strong>SHA-256 hash</strong> of the refresh token (comment at <span class="loc">L306</span>), with revoke / rotate fields — supports multi-device sessions.</p>
+
+      <h3 class="sub">3.4 — Runtime data mapping quirks</h3>
+      <table>
+        <tr><th>Behavior</th><th>File</th><th>LOC</th></tr>
+        <tr><td>Hostel nights / lab tests / grooming services serialized into <code class="inline">notes</code> with <code class="inline">---META---</code> separator</td><td><code class="inline">services/me.service.js</code></td><td><span class="loc">L232–246</span></td></tr>
+        <tr><td>Maps only Prisma Appointment columns</td><td><code class="inline">services/me.service.js</code></td><td><span class="loc">L248–267</span></td></tr>
+        <tr><td>Vendor type → transaction panel map</td><td><code class="inline">services/payment.service.js</code></td><td><span class="loc">L8–15</span></td></tr>
+      </table>
+      <a class="top-link" href="#overview">↑ top</a>
+    </section>
+
+    <!-- ============ SECTION 4 ============ -->
+    <section class="block" id="s4">
+      <h2><span class="num">04</span> Cache Usage</h2>
+
+      <h3 class="sub">4.1 — Backend cache service</h3>
+      <table>
+        <tr><th>Item</th><th>File</th><th>LOC</th></tr>
+        <tr><td>Redis client + in-memory <code class="inline">Map</code> fallback</td><td><code class="inline">services/cache.service.js</code></td><td><span class="loc">L3–9</span></td></tr>
+        <tr><td>Init (Redis if <code class="inline">REDIS_URL</code>, else memory)</td><td><code class="inline">services/cache.service.js</code></td><td><span class="loc">L11–28</span></td></tr>
+        <tr><td><code class="inline">get</code> / <code class="inline">set</code> / <code class="inline">delete</code> / pattern clear</td><td><code class="inline">services/cache.service.js</code></td><td><span class="loc">L31+</span></td></tr>
+      </table>
+
+      <h3 class="sub">4.2 — HTTP response caching middleware</h3>
+      <table>
+        <tr><th>Item</th><th>File</th><th>LOC</th></tr>
+        <tr><td>GET-only cache, key = <code class="inline">prefix:url</code></td><td><code class="inline">middlewares/cache.middleware.js</code></td><td><span class="loc">L3–44</span></td></tr>
+        <tr><td>Cache HIT / MISS headers</td><td><code class="inline">middlewares/cache.middleware.js</code></td><td><span class="loc">L17, L34</span></td></tr>
+        <tr><td>Invalidate on successful mutations</td><td><code class="inline">middlewares/cache.middleware.js</code></td><td><span class="loc">L46–61</span></td></tr>
+      </table>
+
+      <h3 class="sub">4.3 — Where cache is applied</h3>
+      <table>
+        <tr><th>Area</th><th>File</th><th>LOC</th></tr>
+        <tr><td>Public catalog TTL 300s (<code class="inline">public</code> prefix)</td><td><code class="inline">routes/v1/publicCatalog.routes.js</code></td><td><span class="loc">L21, L27–54</span></td></tr>
+        <tr><td>Invalidator wired on vendor CRUD mounts</td><td><code class="inline">routes/v1/index.js</code></td><td><span class="loc">L36, L68, L73–97</span></td></tr>
+        <tr><td>Boot init</td><td><code class="inline">server.js</code> (<code class="inline">cacheService.init</code>)</td><td>(boot file)</td></tr>
+      </table>
+
+      <p><strong>Cached public endpoints (examples):</strong></p>
+      <ul>
+        <li><code class="inline">/public/banners</code>, <code class="inline">/public/search</code> — <span class="loc">L27–29</span></li>
+        <li><code class="inline">/public/vet-clinics</code>, <code class="inline">/public/grooming-centres</code>, <code class="inline">/public/pet-hostels</code>, labs, lab-tests — <span class="loc">L36–54</span></li>
+      </ul>
+      <p><strong>Not cached:</strong> location reverse/autocomplete/nearby (<span class="loc">L31–34</span>) — live Google Maps calls.</p>
+
+      <h3 class="sub">4.4 — Frontend cache</h3>
+      <table>
+        <tr><th>Finding</th><th>Evidence</th></tr>
+        <tr><td>No TanStack React Query / Apollo cache</td><td>Frontend list state is local hooks (<code class="inline">useEntityList</code>), not a shared query cache</td></tr>
+        <tr><td>Token refresh coalescing only</td><td><code class="inline">createApiClient.js</code> silent refresh on 401</td></tr>
+      </table>
+      <div class="note">Reviewer takeaway: server-side HTTP cache exists for public catalog; client-side data cache is minimal.</div>
+      <a class="top-link" href="#overview">↑ top</a>
+    </section>
+
+    <!-- ============ SECTION 5 ============ -->
+    <section class="block" id="s5">
+      <h2><span class="num">05</span> Database Usage</h2>
+
+      <h3 class="sub">5.1 — Prisma client singleton</h3>
+      <table>
+        <tr><th>Item</th><th>File</th><th>LOC</th></tr>
+        <tr><td>Singleton + <code class="inline">globalThis</code> reuse in non-prod</td><td><code class="inline">models/prisma.client.js</code></td><td><span class="loc">L1–18</span></td></tr>
+        <tr><td>Connect on boot</td><td><code class="inline">loaders/database.js</code></td><td>(file)</td></tr>
+      </table>
+
+      <h3 class="sub">5.2 — Repository pattern</h3>
+      <p>Typical pattern: explicit <code class="inline">select</code>, <code class="inline">buildWhere</code>, parallel <code class="inline">findMany</code> + <code class="inline">count</code> for pagination.</p>
+      <table>
+        <tr><th>Example</th><th>File</th><th>LOC</th></tr>
+        <tr><td>Appointment filters + pagination</td><td><code class="inline">repositories/appointment.repository.js</code></td><td><span class="loc">L32–110</span></td></tr>
+        <tr><td>Transaction list / summary</td><td><code class="inline">repositories/transaction.repository.js</code></td><td><span class="loc">L25–138</span></td></tr>
+        <tr><td>Transaction create accepts optional <code class="inline">tx</code></td><td><code class="inline">repositories/transaction.repository.js</code></td><td>create method</td></tr>
+      </table>
+
+      <h3 class="sub">5.3 — Atomic transactions (prisma.$transaction)</h3>
+      <table>
+        <tr><th>Use case</th><th>File</th><th>LOC</th></tr>
+        <tr><td>Payment verify: confirm appointment + create transaction</td><td><code class="inline">services/payment.service.js</code></td><td><span class="loc">L101–120</span> (primary), <span class="loc">L131–145</span> (legacy)</td></tr>
+        <tr><td>Business approval flows</td><td><code class="inline">services/businessApproval.service.js</code></td><td>(approval transaction block)</td></tr>
+      </table>
+
+      <h3 class="sub">5.4 — Query / indexing design</h3>
+      <table>
+        <tr><th>Topic</th><th>Location</th><th>Notes</th></tr>
+        <tr><td>User indexes</td><td>schema <span class="loc">L300–302</span></td><td>role, status, city</td></tr>
+        <tr><td>Appointment indexes</td><td>schema <span class="loc">L1051–1057</span></td><td>missing userId / vendorId indexes</td></tr>
+        <tr><td>Transaction composite index</td><td>schema <span class="loc">L1111</span></td><td><code class="inline">[panelType, businessId]</code></td></tr>
+        <tr><td>Readiness SQL</td><td><code class="inline">routes/v1/index.js</code> <span class="loc">L46</span></td><td><code class="inline">SELECT 1</code></td></tr>
+      </table>
+
+      <h3 class="sub">5.5 — Deviations to review</h3>
+      <table>
+        <tr><th>Issue</th><th>File</th><th>LOC</th></tr>
+        <tr><td>New <code class="inline">PrismaClient()</code> inside a service method (bypasses singleton)</td><td><code class="inline">services/me.service.js</code></td><td><span class="loc">~L287–288</span> (<code class="inline">listNotifications</code>)</td></tr>
+        <tr><td>Polymorphic IDs without FK constraints</td><td>Appointment / BusinessTransaction</td><td>schema <span class="loc">L1040–1041, L1093–1095</span></td></tr>
+      </table>
+      <a class="top-link" href="#overview">↑ top</a>
+    </section>
+
+    <!-- ============ SECTION 6 ============ -->
+    <section class="block" id="s6">
+      <h2><span class="num">06</span> Payment Handling Logic</h2>
+
+      <h3 class="sub">6.1 — End-to-end flow</h3>
+      <div class="flow">User confirms booking (amount &gt; 0)
+  <span class="arrow">→</span> Frontend bookWithPayment()
+  <span class="arrow">→</span> POST /payments/razorpay/order  (creates PENDING appointment + Razorpay order)
+  <span class="arrow">→</span> Razorpay Checkout.js modal
+  <span class="arrow">→</span> POST /payments/razorpay/verify (HMAC verify → CONFIRMED + BusinessTransaction)</div>
+      <p>Zero-amount bookings skip Razorpay and call <code class="inline">meService.createAppointment</code> directly.</p>
+
+      <h3 class="sub">6.2 — Backend: Razorpay SDK wrapper</h3>
+      <p><strong>File:</strong> <code class="inline">services/razorpay.service.js</code></p>
+      <table>
+        <tr><th>Function</th><th>LOC</th><th>Behavior</th></tr>
+        <tr><td><code class="inline">getKeyId</code></td><td><span class="loc">L8–14</span></td><td>Reads <code class="inline">RAZORPAY_KEY_ID</code></td></tr>
+        <tr><td><code class="inline">#getKeySecret</code></td><td><span class="loc">L16–22</span></td><td>Reads <code class="inline">RAZORPAY_KEY_SECRET</code></td></tr>
+        <tr><td><code class="inline">#getClient</code></td><td><span class="loc">L24–32</span></td><td>Lazily creates Razorpay SDK client</td></tr>
+        <tr><td><code class="inline">createOrder</code></td><td><span class="loc">L34–57</span></td><td>Amount in <strong>paise</strong> (<code class="inline">* 100</code>), min ₹1, attaches <code class="inline">userId</code> notes</td></tr>
+        <tr><td><code class="inline">fetchOrder</code></td><td><span class="loc">L59–61</span></td><td>Fetches order from Razorpay</td></tr>
+        <tr><td><code class="inline">verifyPaymentSignature</code></td><td><span class="loc">L63–70</span></td><td>HMAC-SHA256 of <code class="inline">orderId|paymentId</code></td></tr>
+      </table>
+
+      <h3 class="sub">6.3 — Backend: Payment orchestration</h3>
+      <p><strong>File:</strong> <code class="inline">services/payment.service.js</code></p>
+      <table>
+        <tr><th>Step</th><th>LOC</th><th>Behavior</th></tr>
+        <tr><td>Config</td><td><span class="loc">L27–29</span></td><td>Exposes public Key ID only</td></tr>
+        <tr><td>Create order</td><td><span class="loc">L31–53</span></td><td>Validates amount vs booking; pre-creates PENDING appointment; stores <code class="inline">appointmentId</code> in Razorpay order notes</td></tr>
+        <tr><td>Verify payment</td><td><span class="loc">L55–147</span></td><td>Signature check → ownership check → amount check → <code class="inline">$transaction</code></td></tr>
+        <tr><td>Confirm path</td><td><span class="loc">L100–120</span></td><td>Updates appointment to CONFIRMED, creates transaction</td></tr>
+        <tr><td>Legacy fallback</td><td><span class="loc">L121–146</span></td><td>Creates CONFIRMED appointment if no pre-created id</td></tr>
+        <tr><td>Commission transaction</td><td><span class="loc">L149–183</span></td><td>Platform fee from settings (default 12%), <code class="inline">paymentMethod: Razorpay</code>, <code class="inline">paymentStatus: SUCCESS</code></td></tr>
+      </table>
+      <p>Vendor → panel mapping for ledger: <span class="loc">L8–15</span>. Service labels: <span class="loc">L17–24</span>.</p>
+
+      <h3 class="sub">6.4 — Backend: HTTP surface</h3>
+      <table>
+        <tr><th>Item</th><th>File</th><th>LOC</th></tr>
+        <tr><td>Auth required (PET_OWNER / ADMIN roles)</td><td><code class="inline">routes/v1/payments.routes.js</code></td><td><span class="loc">L12</span></td></tr>
+        <tr><td><code class="inline">GET /razorpay/config</code></td><td><code class="inline">routes/v1/payments.routes.js</code></td><td><span class="loc">L14</span></td></tr>
+        <tr><td><code class="inline">POST /razorpay/order</code></td><td><code class="inline">routes/v1/payments.routes.js</code></td><td><span class="loc">L15</span></td></tr>
+        <tr><td><code class="inline">POST /razorpay/verify</code></td><td><code class="inline">routes/v1/payments.routes.js</code></td><td><span class="loc">L16</span></td></tr>
+        <tr><td>Mounted under API</td><td><code class="inline">routes/v1/index.js</code></td><td><span class="loc">L102</span> → <code class="inline">/payments</code></td></tr>
+        <tr><td>Controller</td><td><code class="inline">controllers/payment.controller.js</code></td><td><span class="loc">L6–19</span></td></tr>
+        <tr><td>Zod schemas</td><td><code class="inline">validations/payment.validation.js</code></td><td>order + verify + booking payload</td></tr>
+      </table>
+
+      <h3 class="sub">6.5 — Frontend: payment modules</h3>
+      <table>
+        <tr><th>File</th><th>LOC</th><th>Role</th></tr>
+        <tr><td><code class="inline">resources/views/src/services/paymentService.js</code></td><td><span class="loc">L3–13</span></td><td>API client: config / order / verify</td></tr>
+        <tr><td><code class="inline">resources/views/src/utils/razorpayCheckout.js</code></td><td><span class="loc">L5–22, L27–79</span></td><td>Loads Checkout.js; opens modal; returns payment ids</td></tr>
+        <tr><td><code class="inline">resources/views/src/utils/bookWithPayment.js</code></td><td><span class="loc">L9–33</span></td><td>Orchestrates free vs paid booking</td></tr>
+        <tr><td><code class="inline">resources/views/src/pages/user/UserBookingPage.jsx</code></td><td><span class="loc">~L709–717</span></td><td>Full-page booking confirm</td></tr>
+        <tr><td><code class="inline">resources/views/src/components/user/BookingModal.jsx</code></td><td><span class="loc">~L243–251</span></td><td>Modal booking confirm</td></tr>
+      </table>
+
+      <h3 class="sub">6.6 — Environment configuration</h3>
+      <table>
+        <tr><th>Variable</th><th>Template file</th><th>Notes</th></tr>
+        <tr><td><code class="inline">RAZORPAY_KEY_ID</code></td><td><code class="inline">.env.example</code></td><td>Public key (safe for checkout)</td></tr>
+        <tr><td><code class="inline">RAZORPAY_KEY_SECRET</code></td><td><code class="inline">.env.example</code></td><td><strong>Server-only</strong> — never expose to frontend</td></tr>
+        <tr><td>Runtime values</td><td><code class="inline">.env</code> (local)</td><td>Must not be committed</td></tr>
+      </table>
+
+      <h3 class="sub">6.7 — Payment security checks (implemented)</h3>
+      <table>
+        <tr><th>Check</th><th>Location</th></tr>
+        <tr><td>HMAC signature verification</td><td><code class="inline">razorpay.service.js</code> <span class="loc">L63–70</span>; used in <code class="inline">payment.service.js</code> <span class="loc">L67–74</span></td></tr>
+        <tr><td>Order belongs to requesting user</td><td><code class="inline">payment.service.js</code> <span class="loc">L76–79</span></td></tr>
+        <tr><td>Amount matches appointment / booking</td><td><code class="inline">payment.service.js</code> <span class="loc">L35–37, L96–98, L126–128</span></td></tr>
+        <tr><td>Appointment ownership</td><td><code class="inline">payment.service.js</code> <span class="loc">L93–95</span></td></tr>
+        <tr><td>Atomic confirm + ledger write</td><td><code class="inline">payment.service.js</code> <span class="loc">L101–120</span></td></tr>
+        <tr><td>Secret never returned to client</td><td>only <code class="inline">keyId</code> via config endpoint</td></tr>
+      </table>
+
+      <h3 class="sub">6.8 — Payment review gaps (developer checklist)</h3>
+      <table>
+        <tr><th>Gap</th><th>Why it matters</th></tr>
+        <tr><td>No Razorpay <strong>webhook</strong> handler yet</td><td>Abandoned checkouts leave PENDING appointments; webhooks improve reconciliation</td></tr>
+        <tr><td>PENDING appointments on cancelled payments</td><td>User may dismiss modal after order create — cleanup / expiry job recommended</td></tr>
+        <tr><td>No refund API path</td><td><code class="inline">REFUNDED</code> enum exists in schema but no automated refund flow</td></tr>
+        <tr><td>Duplicate verify risk</td><td>Idempotency key / "already CONFIRMED" short-circuit should be verified by reviewer</td></tr>
+      </table>
+      <a class="top-link" href="#overview">↑ top</a>
+    </section>
+
+    <!-- ============ SECTION 7 ============ -->
+    <section class="block" id="s7">
+      <h2><span class="num">07</span> Authentication and Security</h2>
+
+      <h3 class="sub">7.1 — JWT</h3>
+      <table>
+        <tr><th>Item</th><th>File</th><th>LOC</th></tr>
+        <tr><td>Production refuses weak secrets</td><td><code class="inline">utils/jwt.util.js</code></td><td><span class="loc">L3–9</span></td></tr>
+        <tr><td>Access token TTL (default 15m)</td><td><code class="inline">utils/jwt.util.js</code></td><td><span class="loc">L13–15</span></td></tr>
+        <tr><td>Refresh TTL (default 30 days)</td><td><code class="inline">utils/jwt.util.js</code></td><td><span class="loc">L17–19</span></td></tr>
+        <tr><td>Sign / verify</td><td><code class="inline">utils/jwt.util.js</code></td><td><span class="loc">L24–37</span></td></tr>
+      </table>
+
+      <h3 class="sub">7.2 — Auth middleware</h3>
+      <table>
+        <tr><th>Item</th><th>File</th><th>LOC</th></tr>
+        <tr><td>Bearer JWT authenticate</td><td><code class="inline">middlewares/auth.middleware.js</code></td><td><span class="loc">L13–65</span></td></tr>
+        <tr><td>Business panel resolve via <code class="inline">PANEL_REGISTRY</code></td><td><code class="inline">middlewares/auth.middleware.js</code></td><td><span class="loc">L24–48</span></td></tr>
+        <tr><td>Role authorize</td><td><code class="inline">middlewares/auth.middleware.js</code></td><td><span class="loc">L70–79</span></td></tr>
+        <tr><td>Admin / business helpers</td><td><code class="inline">middlewares/auth.middleware.js</code></td><td><span class="loc">L82–100</span></td></tr>
+      </table>
+
+      <h3 class="sub">7.3 — Express hardening</h3>
+      <table>
+        <tr><th>Item</th><th>File</th><th>LOC</th></tr>
+        <tr><td>Helmet</td><td><code class="inline">loaders/express.js</code></td><td><span class="loc">L21–26</span></td></tr>
+        <tr><td>CORS allow-list</td><td><code class="inline">loaders/express.js</code></td><td><span class="loc">L32–48</span></td></tr>
+        <tr><td>Rate limit 300 / 15 min on <code class="inline">/api/</code></td><td><code class="inline">loaders/express.js</code></td><td><span class="loc">L51–59</span></td></tr>
+        <tr><td>JSON body limit 2mb</td><td><code class="inline">loaders/express.js</code></td><td><span class="loc">L61–62</span></td></tr>
+      </table>
+
+      <h3 class="sub">7.4 — Frontend session</h3>
+      <table>
+        <tr><th>Item</th><th>File</th><th>Notes</th></tr>
+        <tr><td>Silent refresh on 401</td><td><code class="inline">resources/views/src/services/api/createApiClient.js</code></td><td>Coalesced refresh</td></tr>
+        <tr><td>Panel role maps</td><td><code class="inline">resources/views/src/config/panels.js</code></td><td>USER → PET_OWNER</td></tr>
+      </table>
+      <a class="top-link" href="#overview">↑ top</a>
+    </section>
+
+    <!-- ============ SECTION 8 ============ -->
+    <section class="block" id="s8">
+      <h2><span class="num">08</span> API Structure and Validation</h2>
+
+      <h3 class="sub">8.1 — Aggregation</h3>
+      <table>
+        <tr><th>Item</th><th>File</th><th>LOC</th></tr>
+        <tr><td>Mount <code class="inline">/api/v1</code></td><td><code class="inline">loaders/express.js</code></td><td><span class="loc">~L93</span></td></tr>
+        <tr><td>Feature mounts</td><td><code class="inline">routes/v1/index.js</code></td><td><span class="loc">L70–102</span></td></tr>
+      </table>
+      <p>Major route groups include: <code class="inline">auth</code>, <code class="inline">users</code>, <code class="inline">dashboard</code>, vendor CRUD (<code class="inline">vet-clinics</code>, <code class="inline">grooming-centres</code>, <code class="inline">diagnostic-labs</code>, <code class="inline">pet-hostels</code>, …), <code class="inline">appointments</code>, <code class="inline">transactions</code>, <code class="inline">me</code>, <code class="inline">public</code>, <code class="inline">payments</code>, app-specific panels.</p>
+
+      <h3 class="sub">8.2 — Zod validation middleware</h3>
+      <table>
+        <tr><th>Item</th><th>File</th><th>LOC</th></tr>
+        <tr><td><code class="inline">validate(schema)</code> factory</td><td><code class="inline">middlewares/validate.middleware.js</code></td><td><span class="loc">L3–28</span></td></tr>
+        <tr><td>Writes coerced values back to <code class="inline">req</code></td><td><code class="inline">middlewares/validate.middleware.js</code></td><td><span class="loc">L21–24</span></td></tr>
+        <tr><td>Payment schemas</td><td><code class="inline">validations/payment.validation.js</code></td><td>(full file)</td></tr>
+        <tr><td>Public catalog schemas</td><td><code class="inline">validations/publicCatalog.validation.js</code></td><td>used by public routes</td></tr>
+      </table>
+      <p><strong>Pattern:</strong> route attaches <code class="inline">validate(schema)</code> before controller — example <code class="inline">routes/v1/payments.routes.js</code> <span class="loc">L15–16</span>.</p>
+      <a class="top-link" href="#overview">↑ top</a>
+    </section>
+
+    <!-- ============ SECTION 9 ============ -->
+    <section class="block" id="s9">
+      <h2><span class="num">09</span> Frontend Architecture</h2>
+
+      <h3 class="sub">9.1 — Multi-panel apps</h3>
+      <p>Isolated route trees for: Public / marketing, Admin, Business (clinic, grooming, lab, hostel), Individual veterinarian, Individual groomer, Pet owner (user app).</p>
+      <p>Entry composition: <code class="inline">resources/views/src/routes/AppRoutes.jsx</code></p>
+
+      <h3 class="sub">9.2 — User booking flow (cite for review)</h3>
+      <table>
+        <tr><th>Step</th><th>File</th><th>LOC</th></tr>
+        <tr><td>Route <code class="inline">/booking/:categoryKey/:providerId</code></td><td><code class="inline">UserRoutes.jsx</code></td><td><span class="loc">~L65–67</span></td></tr>
+        <tr><td>Category → serviceType / vendorType map</td><td><code class="inline">UserBookingPage.jsx</code> / <code class="inline">BookingModal.jsx</code></td><td>CATEGORY_CONFIG at top of files</td></tr>
+        <tr><td>Build payload + amount</td><td><code class="inline">UserBookingPage.jsx</code></td><td>confirm handler (<span class="loc">~L637–706</span>)</td></tr>
+        <tr><td>Pay then book</td><td><code class="inline">bookWithPayment.js</code></td><td><span class="loc">L9–33</span></td></tr>
+        <tr><td>Persist extras in notes</td><td><code class="inline">me.service.js</code></td><td><span class="loc">L232–246</span></td></tr>
+      </table>
+
+      <h3 class="sub">9.3 — Service / hook layout</h3>
+      <div class="flow">resources/views/src/
+  services/          # domain API wrappers (meService, paymentService, …)
+  services/api/      # axios factories (userApi, adminApi, …)
+  hooks/             # useEntityList + domain hooks
+  pages/user/        # User app screens
+  components/user/   # BookingModal, cards, …
+  utils/             # bookWithPayment, razorpayCheckout, formatters
+  config/            # panels, category configs</div>
+      <a class="top-link" href="#overview">↑ top</a>
+    </section>
+
+    <!-- ============ SECTION 10 ============ -->
+    <section class="block" id="s10">
+      <h2><span class="num">10</span> Review Notes / Improvement Points</h2>
+      <p class="intro">Intentional callouts for the client's developer review — not a change log.</p>
+
+      <h3 class="sub">Strengths</h3>
+      <ol>
+        <li>Clear layered modularity (routes / controllers / services / repositories)</li>
+        <li>Panel registry avoids duplicated vendor-auth logic</li>
+        <li>Zod validation at the HTTP boundary</li>
+        <li>Payment verification includes HMAC, user ownership, amount match, and <code class="inline">$transaction</code></li>
+        <li>Cache with Redis + memory fallback on public catalog; mutation invalidation</li>
+        <li>Security basics: Helmet, CORS, rate limit, JWT production secret guard, refresh-token hashing</li>
+      </ol>
+
+      <h3 class="sub">Areas to tighten</h3>
+      <table>
+        <tr><th>Area</th><th>Observation</th><th>Cite</th></tr>
+        <tr><td>Data design</td><td>Appointment extras in <code class="inline">notes</code> instead of columns</td><td><code class="inline">me.service.js</code> <span class="loc">L232–246</span></td></tr>
+        <tr><td>Data design</td><td>Polymorphic vendor / transaction IDs without FKs</td><td>schema <span class="loc">L1040–1041, L1095</span></td></tr>
+        <tr><td>Indexes</td><td>Missing <code class="inline">userId</code> / <code class="inline">vendorId</code> on appointments</td><td>schema <span class="loc">L1051–1057</span></td></tr>
+        <tr><td>Payments</td><td>No webhook / PENDING cleanup / refund automation</td><td>Section 6.8</td></tr>
+        <tr><td>Prisma usage</td><td>Occasional non-singleton PrismaClient</td><td><code class="inline">me.service.js</code> notifications</td></tr>
+        <tr><td>Frontend cache</td><td>No React Query; lists refetch locally</td><td>Section 4.4</td></tr>
+        <tr><td>Secrets</td><td>Ensure <code class="inline">.env</code> never committed; rotate keys exposed in chat/history</td><td><code class="inline">.env</code> / <code class="inline">.env.example</code></td></tr>
+      </table>
+
+      <h3 class="sub">Suggested developer review order</h3>
+      <ol>
+        <li><code class="inline">prisma/schema.prisma</code> — models &amp; indexes</li>
+        <li><code class="inline">routes/v1/index.js</code> + one full feature slice (e.g. appointments)</li>
+        <li><code class="inline">services/payment.service.js</code> + <code class="inline">services/razorpay.service.js</code> + frontend <code class="inline">bookWithPayment.js</code></li>
+        <li><code class="inline">services/cache.service.js</code> + <code class="inline">middlewares/cache.middleware.js</code> + public catalog routes</li>
+        <li><code class="inline">middlewares/auth.middleware.js</code> + <code class="inline">utils/jwt.util.js</code> + <code class="inline">config/panelRegistry.js</code></li>
+        <li>User booking UI (<code class="inline">UserBookingPage.jsx</code>, <code class="inline">BookingModal.jsx</code>)</li>
+      </ol>
+      <a class="top-link" href="#overview">↑ top</a>
+    </section>
+
+    <!-- ============ SECTION 11 ============ -->
+    <section class="block" id="s11">
+      <h2><span class="num">11</span> Quick File Index</h2>
+      <table>
+        <tr><th>Theme</th><th>Primary files</th></tr>
+        <tr><td>API aggregation</td><td><code class="inline">routes/v1/index.js</code></td></tr>
+        <tr><td>Modularity / panels</td><td><code class="inline">config/panelRegistry.js</code>, <code class="inline">utils/businessScope.util.js</code></td></tr>
+        <tr><td>Data design</td><td><code class="inline">prisma/schema.prisma</code></td></tr>
+        <tr><td>Cache</td><td><code class="inline">services/cache.service.js</code>, <code class="inline">middlewares/cache.middleware.js</code>, <code class="inline">routes/v1/publicCatalog.routes.js</code></td></tr>
+        <tr><td>DB client</td><td><code class="inline">models/prisma.client.js</code>, <code class="inline">repositories/*</code></td></tr>
+        <tr><td>Payments</td><td><code class="inline">services/razorpay.service.js</code>, <code class="inline">services/payment.service.js</code>, <code class="inline">routes/v1/payments.routes.js</code>, <code class="inline">resources/views/src/utils/bookWithPayment.js</code>, <code class="inline">resources/views/src/utils/razorpayCheckout.js</code>, <code class="inline">resources/views/src/services/paymentService.js</code></td></tr>
+        <tr><td>Auth</td><td><code class="inline">utils/jwt.util.js</code>, <code class="inline">middlewares/auth.middleware.js</code>, <code class="inline">loaders/express.js</code></td></tr>
+        <tr><td>Validation</td><td><code class="inline">middlewares/validate.middleware.js</code>, <code class="inline">validations/*</code></td></tr>
+        <tr><td>Booking UX</td><td><code class="inline">resources/views/src/pages/user/UserBookingPage.jsx</code>, <code class="inline">resources/views/src/components/user/BookingModal.jsx</code></td></tr>
+        <tr><td>Appointment create</td><td><code class="inline">services/me.service.js</code> <span class="loc">L229–270</span></td></tr>
+      </table>
+
+      <h3 class="sub">Document control</h3>
+      <table>
+        <tr><th>Field</th><th>Value</th></tr>
+        <tr><td>Document</td><td>Client Technical Code Review — File &amp; Line-Number Map</td></tr>
+        <tr><td>Audience</td><td>Client technical lead / developer reviewers</td></tr>
+        <tr><td>Scope</td><td>Code modularity, data design, cache, DB, payments, auth, API, frontend</td></tr>
+        <tr><td>Citation style</td><td>Path + line numbers (LOC) as of documentation generation</td></tr>
+        <tr><td>Note</td><td>Line numbers may shift slightly after future commits; use symbol/function names as secondary anchors</td></tr>
+      </table>
+      <a class="top-link" href="#overview">↑ top</a>
+    </section>
+
+    <footer class="docend">
+      <p>This is a pointer index only. For the plain-language explanation of what each of these files and lines actually does — including talking points for presenting to a non-technical stakeholder — see the companion <a href="vetnco-code-review-explained.html">Explained Edition</a>.</p>
+    </footer>
+  </main>
+</div>
+</body>
+</html>
